@@ -1,9 +1,14 @@
+require 'byebug'
+
+require './gosu_wrapper/colors'
+require './gosu_wrapper/util'
 
 class GosuWrapper
 
   extend Util
 
-  attr_reader :window_constructor, :window, :window_attributes
+  attr_reader :window_constructor, :window, :window_attributes, :initializers,
+              :hooks, :helpers, :run_initializers
 
   def initialize(width:, height:, attributes:)
     @window_constructor = Class.new(Gosu::Window) do
@@ -14,6 +19,10 @@ class GosuWrapper
     @window = @window_constructor.new(width, height)
     @window.window_height = height
     @window.window_width = width
+    @initializers = []
+    @hooks = []
+    @helpers = []
+    @run_initializers = {}
   end
 
   # Delegate "set_<attr>" setters to window
@@ -48,36 +57,74 @@ class GosuWrapper
   end
 
   # Methods are defined on the window's anonyous class
-  # to connect to Gosu::Window's hooks
-  # these are predefined; see their docs.
-  # The generated method's body is always invoked within the App instance's scope.
-  # Aliased to add_helper to distinguish custom methods from those in the
-  # Gosu::Window lifecycle
-  def add_hook(name, &blk)
+  # The generated method's body is always invoked with the App instance's scope.
+  def define_method_on_window(name, &blk)
     app = self
-    window.define_singleton_method(name) { |*args, **keywords| app.scope(&blk) }
+    window.define_singleton_method(name) do |*args, **keywords|
+      app.scope(*args, **keywords, &blk)
+    end
   end
-  alias add_helper add_hook
+
+  def add_hook(name, &blk)
+    hooks << name
+    define_method_on_window(name, &blk)
+  end
+
+  def add_helper(name, &blk)
+    helpers << name
+    define_method_on_window(name, &blk)
+  end
+
+  # these are called automatically by #show
+  def add_initializer(name, &blk)
+    initializers << name
+    define_method_on_window(name, &blk)
+  end
+
+  def show
+    window.show
+  end
 
   def image(path:)
     Gosu::Image.new(path)
   end
 
-  # A wrapper over instance_eval i.e. app.scope { set_x 200 }
+  def draw_rect(start_x:, start_y:, end_x:, end_y:, color:, **_)
+    width = end_x - start_x
+    height = end_y - start_y
+    Gosu.draw_rect(start_x, start_y, width, height, color)
+  end
+
+  def colors
+    Colors
+  end
+
+  # A wrapper over instance_exec i.e. app.scope { set_x 200 }
   # Always returns self (app)
   # Be aware that this only sets the scope for one level
   # i.e. if you call a method in the passed block, it'll use a different scope
-  def scope &blk
-    instance_eval &blk
+  def scope(*args, **keywords, &blk)
+    if keywords.blank?
+      instance_exec *args, &blk
+    else
+      instance_exec *args, **keywords, &blk
+    end
+  end
+
+  # config is the same as scope, but returns self
+  def config(&blk)
+    scope &blk
     self
   end
-  alias config scope
 
   # Call a method which is defined on window.
   # Although this could have been overloaded onto get_<attr>,
-  # for the sake of easier debugging that's limited to instance variables
-  def invoke(name, *args, &blk)
-    window.send(name, *args, &blk)
+  # to avoid namin conflicts that's limited to instance variables
+  def invoke(name, *args, **keywords, &blk)
+    window.send(name, *args, **keywords, &blk)
   end
+  alias call_helper invoke
+  alias dispatch invoke
+  alias call_hook invoke
 
 end
