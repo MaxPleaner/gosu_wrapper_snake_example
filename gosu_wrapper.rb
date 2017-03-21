@@ -64,10 +64,12 @@ class GosuWrapper
   end
 
   # A wrapper over instance_eval i.e. app.scope { set_x 200 }
+  # Always returns self (app)
   # Be aware that this only sets the scope for one level
   # i.e. if you call a method in the passed block, it'll use a different scope
   def scope &blk
     instance_eval &blk
+    self
   end
   alias config scope
 
