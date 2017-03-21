@@ -7,6 +7,7 @@ module App
     %i{
       window_height
       window_width
+      grid_sections
     }
   end
 
@@ -14,6 +15,7 @@ module App
     app.config do
       set_query ""
       set_results Hash.new
+      set_grid_sections nil
     end
   end
 end

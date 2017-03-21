@@ -10,7 +10,6 @@ module App
             invoke name
           end
         end
-
       end
 
       add_helper(:div_window_into) do |num_cols:, num_rows:, margin: |

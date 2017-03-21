@@ -43,6 +43,18 @@ class GosuWrapper
     end
   end
 
+  # Delegate "get_or_set_<attr>" getters to window
+  method_missing_for /^get_or_set_(.+)$/, type: :instance do |window_attr, &blk|
+    Proc.new do
+      if window_attr.to_sym.in? window_attributes
+        send(:"get_#{window_attr}") || send(
+          :"set_#{window_attr}",
+          instance_eval(&blk)
+        )
+      end
+    end
+  end
+
   # Delegate "change_<attr>" non-destructive setters to window
   # i.e. change_x(:+, 1) is equivalent to @x += 1
   method_missing_for /^change_(.+)$/, type: :instance do |window_attr, method_name, val|
