@@ -1,7 +1,4 @@
-require 'gosu'
-require './gosu_wrapper.rb'
-
-require 'active_support/all'
+require 'gosu_wrapper'
 
 require './app/state'
 require './app/helpers'
