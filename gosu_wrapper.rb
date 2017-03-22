@@ -1,14 +1,15 @@
 require 'byebug'
 
 require './gosu_wrapper/colors'
+require './gosu_wrapper/buttons'
 require './gosu_wrapper/util'
 
 class GosuWrapper
 
   extend Util
 
-  attr_reader :window_constructor, :window, :window_attributes, :initializers,
-              :hooks, :helpers, :run_initializers
+  attr_reader :window_constructor, :window, :window_attributes,
+              :hooks, :helpers
 
   def initialize(width:, height:, attributes:)
     @window_constructor = Class.new(Gosu::Window) do
@@ -19,10 +20,8 @@ class GosuWrapper
     @window = @window_constructor.new(width, height)
     @window.window_height = height
     @window.window_width = width
-    @initializers = []
     @hooks = []
     @helpers = []
-    @run_initializers = {}
   end
 
   # Delegate "set_<attr>" setters to window
@@ -31,6 +30,7 @@ class GosuWrapper
       if window_attr.to_sym.in? window_attributes
         window.instance_variable_set("@#{window_attr}", val)
       end
+      val
     end
   end
 
@@ -87,12 +87,6 @@ class GosuWrapper
     define_method_on_window(name, &blk)
   end
 
-  # these are called automatically by #show
-  def add_initializer(name, &blk)
-    initializers << name
-    define_method_on_window(name, &blk)
-  end
-
   def show
     window.show
   end
@@ -109,6 +103,10 @@ class GosuWrapper
 
   def colors
     Colors
+  end
+
+  def buttons
+    Buttons
   end
 
   # A wrapper over instance_exec i.e. app.scope { set_x 200 }
